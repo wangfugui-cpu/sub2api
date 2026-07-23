@@ -277,10 +277,13 @@ jobs:
     if: ${{ needs.release.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout default branch
+      # Personal releases must never write version metadata back to the
+      # upstream-tracking default branch. Keep that branch available for
+      # clean upstream syncs and update only the personal distribution branch.
+      - name: Checkout personal distribution branch
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: personal
 
       - name: Sync VERSION file to released tag
         run: |
@@ -303,4 +306,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add backend/cmd/server/VERSION
           git commit -m "chore: sync VERSION to ${VERSION} [skip ci]"
-          git push origin HEAD:${{ github.event.repository.default_branch }}
+          git push origin HEAD:personal

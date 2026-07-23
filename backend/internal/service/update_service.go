@@ -30,7 +30,10 @@ var (
 const (
 	updateCacheKey = "update_check_cache"
 	updateCacheTTL = 1200 // 20 minutes
-	githubRepo     = "Wei-Shaw/sub2api"
+	// githubRepo is the release feed used by the in-place updater. Keep it
+	// independent from the Go module path so personal distributions can receive
+	// updates only from releases they publish themselves.
+	githubRepo = "wangfugui-cpu/sub2api"
 
 	// Security: allowed download domains for updates
 	allowedDownloadHost = "github.com"

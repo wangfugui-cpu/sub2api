@@ -16,7 +16,7 @@ export default {
     goToDashboard: 'Go to Dashboard',
     // User-focused value proposition
     heroSubtitle: 'One Key, All AI Models',
-    heroDescription: 'No need to manage multiple subscriptions. Access Claude, GPT, Gemini and more with a single API key',
+    heroDescription: 'No need to manage multiple subscriptions. Access Claude and GPT with a single API key',
     tags: {
       subscriptionToApi: 'Subscription to API',
       stickySession: 'Session Persistence',
@@ -99,8 +99,6 @@ export default {
       supported: 'Supported',
       soon: 'Soon',
       claude: 'Claude',
-      gemini: 'Gemini',
-      antigravity: 'Antigravity',
       more: 'More'
     },
     // CTA section

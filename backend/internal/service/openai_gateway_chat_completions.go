@@ -60,7 +60,14 @@ func (s *OpenAIGatewayService) ForwardAsChatCompletions(
 	defaultMappedModel string,
 ) (*OpenAIForwardResult, error) {
 	beginUpstreamResponseModelObservation(c)
+	ClearActualOpenAIUpstreamEndpoint(c)
+	if shouldForwardOpenAIResponsesViaRawChatCompletions(account) {
+		SetActualOpenAIUpstreamEndpoint(c, "/v1/chat/completions")
+	}
 	setCodexToolNameReverse(c, nil)
+	if _, err := s.prepareCodexAccountIdentitySource(ctx, c, account); err != nil {
+		return nil, err
+	}
 
 	restrictionResult := s.detectCodexClientRestriction(c, account, body)
 	logCodexCLIOnlyDetection(ctx, c, account, getAPIKeyIDFromContext(c), restrictionResult, body)
@@ -261,6 +268,7 @@ func (s *OpenAIGatewayService) ForwardAsChatCompletions(
 		} else if promptCacheKey != "" {
 			reqBody["prompt_cache_key"] = promptCacheKey
 		}
+		applyCodexAccountIdentityClientMetadataMap(reqBody, codexAccountIdentitySource(c, account), getAPIKeyIDFromContext(c))
 		responsesBody, err = json.Marshal(reqBody)
 		if err != nil {
 			return nil, fmt.Errorf("remarshal after codex transform: %w", err)
@@ -314,7 +322,7 @@ func (s *OpenAIGatewayService) ForwardAsChatCompletions(
 
 	if promptCacheKey != "" {
 		apiKeyID := getAPIKeyIDFromContext(c)
-		upstreamReq.Header.Set("session_id", generateSessionUUID(isolateOpenAISessionID(apiKeyID, promptCacheKey)))
+		upstreamReq.Header.Set("session_id", generateSessionUUID(isolateOpenAIUpstreamSessionID(apiKeyID, codexAccountIdentitySource(c, account), promptCacheKey)))
 	}
 
 	// 7. Send request
@@ -503,7 +511,7 @@ func (s *OpenAIGatewayService) handleChatBufferedStreamingResponse(
 		}
 		message := openAICompatFailedResponseMessage(finalResponse)
 		if openAIStreamFailedEventShouldFailover(payload, message) {
-			return nil, s.newOpenAIStreamFailoverError(c, account, false, requestID, payload, message, resp.Header)
+			return nil, s.newOpenAIStreamFailoverErrorWithModel(c, account, false, requestID, payload, message, upstreamModel, resp.Header)
 		}
 		message = s.recordOpenAIStreamUpstreamError(c, account, false, requestID, "http_error", payload, message)
 		// response.failed 到达在 HTTP 200 SSE 流上，无真实 HTTP 错误码；统一走语义
@@ -758,7 +766,7 @@ func (s *OpenAIGatewayService) handleChatStreamingResponse(
 				shouldFailover = openAIStreamErrorEventShouldFailover(payloadBytes, message)
 			}
 			if !clientOutputStarted && shouldFailover {
-				streamFailoverErr = s.newOpenAIStreamFailoverError(c, account, false, requestID, payloadBytes, message, resp.Header)
+				streamFailoverErr = s.newOpenAIStreamFailoverErrorWithModel(c, account, false, requestID, payloadBytes, message, upstreamModel, resp.Header)
 				return true
 			}
 			message = s.recordOpenAIStreamUpstreamError(c, account, false, requestID, "http_error", payloadBytes, message)

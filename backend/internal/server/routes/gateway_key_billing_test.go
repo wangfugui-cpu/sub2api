@@ -118,6 +118,37 @@ func TestGatewayRoutesKeyBillingInfoPathIsRegistered(t *testing.T) {
 	t.Fatal("GET /v1/sub2api/billing should be registered")
 }
 
+func TestGatewayRoutesKeyIdentityPathIsRegistered(t *testing.T) {
+	router := newGatewayRoutesTestRouter()
+
+	for _, route := range router.Routes() {
+		if route.Method == http.MethodGet && route.Path == "/v1/sub2api/identity" {
+			return
+		}
+	}
+
+	t.Fatal("GET /v1/sub2api/identity should be registered")
+}
+
+func TestGatewayRoutesKeyIdentityEndToEnd(t *testing.T) {
+	router, _, key := newKeyBillingRouteTestRouter(config.RunModeStandard)
+	req := httptest.NewRequest(http.MethodGet, "/v1/sub2api/identity", nil)
+	req.Header.Set("Authorization", "Bearer "+key)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	require.Equal(t, "sub2api.key_identity", body["object"])
+	require.Equal(t, "sub2api:user:7", body["subject"])
+	require.NotContains(t, w.Body.String(), key)
+	require.NotContains(t, body, "email")
+	require.NotContains(t, body, "balance")
+}
+
 func TestGatewayRoutesKeyBillingInfoEndToEnd(t *testing.T) {
 	t.Run("missing credentials", func(t *testing.T) {
 		router, rateRepo, _ := newKeyBillingRouteTestRouter(config.RunModeStandard)

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler"
@@ -30,6 +31,14 @@ func (r *keyBillingRouteAPIKeyRepo) GetByKeyForAuth(_ context.Context, key strin
 	return &clone, nil
 }
 
+// The v0.2.4 authentication path records API-key activity before the route
+// handler runs. The route fixture does not persist anything, but it must model
+// that repository capability so identity and billing tests exercise the real
+// middleware chain.
+func (r *keyBillingRouteAPIKeyRepo) UpdateLastUsed(context.Context, int64, time.Time) error {
+	return nil
+}
+
 type keyBillingRouteRateRepo struct {
 	service.UserGroupRateRepository
 	lookupCalls int
@@ -45,6 +54,10 @@ func (r *keyBillingRouteRateRepo) GetRPMOverrideByUserAndGroup(context.Context, 
 }
 
 func newKeyBillingRouteTestRouter(runMode string) (*gin.Engine, *keyBillingRouteRateRepo, string) {
+	return newKeyBillingRouteTestRouterWithBalance(runMode, 10)
+}
+
+func newKeyBillingRouteTestRouterWithBalance(runMode string, balance float64) (*gin.Engine, *keyBillingRouteRateRepo, string) {
 	gin.SetMode(gin.TestMode)
 	group := &service.Group{
 		ID:               42,
@@ -54,7 +67,7 @@ func newKeyBillingRouteTestRouter(runMode string) (*gin.Engine, *keyBillingRoute
 		SubscriptionType: service.SubscriptionTypeStandard,
 		RateMultiplier:   0.75,
 	}
-	user := &service.User{ID: 7, Role: service.RoleUser, Status: service.StatusActive, Balance: 10}
+	user := &service.User{ID: 7, Role: service.RoleUser, Status: service.StatusActive, Balance: balance}
 	var groupID *int64
 	var apiKeyGroup *service.Group
 	if runMode != config.RunModeSimple {
@@ -131,7 +144,11 @@ func TestGatewayRoutesKeyIdentityPathIsRegistered(t *testing.T) {
 }
 
 func TestGatewayRoutesKeyIdentityEndToEnd(t *testing.T) {
-	router, _, key := newKeyBillingRouteTestRouter(config.RunModeStandard)
+	router, _, key := newKeyBillingRouteTestRouterWithBalance(config.RunModeStandard, 0)
+	// Identity is authenticated metadata, not a billable model request. A user
+	// whose balance is exhausted must still be able to identify the principal
+	// behind a valid key. This goes through the full standard authentication
+	// middleware rather than mounting the handler directly.
 	req := httptest.NewRequest(http.MethodGet, "/v1/sub2api/identity", nil)
 	req.Header.Set("Authorization", "Bearer "+key)
 	w := httptest.NewRecorder()

@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const keyIdentitySchemaVersion = 1
+const keyIdentitySchemaVersion = 2
 
 // keyIdentityResponse is deliberately small: a relying service only needs a
 // stable subject and a display name. Email, balances, group details and the
@@ -20,9 +20,19 @@ type keyIdentityResponse struct {
 	SchemaVersion int                     `json:"schema_version"`
 	Subject       string                  `json:"subject"`
 	User          keyIdentityUserResponse `json:"user"`
+	Key           keyIdentityKeyResponse  `json:"key"`
 }
 
 type keyIdentityUserResponse struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+// keyIdentityKeyResponse identifies the credential which was actually
+// authenticated, without disclosing its secret or quota data.  Relying
+// services may keep this as an observed-key audit label; it is not a list of
+// every key owned by the user.
+type keyIdentityKeyResponse struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
 }
@@ -48,6 +58,10 @@ func (h *GatewayHandler) KeyIdentity(c *gin.Context) {
 			ID:   user.ID,
 			Name: keyIdentityDisplayName(user),
 		},
+		Key: keyIdentityKeyResponse{
+			ID:   apiKey.ID,
+			Name: keyIdentityKeyDisplayName(apiKey),
+		},
 	})
 }
 
@@ -60,4 +74,11 @@ func keyIdentityDisplayName(user *service.User) string {
 		return name
 	}
 	return "Sub2API User " + strconv.FormatInt(user.ID, 10)
+}
+
+func keyIdentityKeyDisplayName(apiKey *service.APIKey) string {
+	if name := strings.TrimSpace(apiKey.Name); name != "" {
+		return name
+	}
+	return "API Key " + strconv.FormatInt(apiKey.ID, 10)
 }

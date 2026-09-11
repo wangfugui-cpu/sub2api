@@ -18,7 +18,9 @@ func TestGatewayHandlerKeyIdentityReturnsOnlySafeIdentityFields(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v1/sub2api/identity", nil)
 	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+		ID: 77,
 		Key: "sk-sensitive-value",
+		Name: "Family tablet",
 		User: &service.User{
 			ID:       42,
 			Username: "Family Member",
@@ -34,10 +36,12 @@ func TestGatewayHandlerKeyIdentityReturnsOnlySafeIdentityFields(t *testing.T) {
 	var got keyIdentityResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got))
 	require.Equal(t, "sub2api.key_identity", got.Object)
-	require.Equal(t, 1, got.SchemaVersion)
+	require.Equal(t, 2, got.SchemaVersion)
 	require.Equal(t, "sub2api:user:42", got.Subject)
 	require.Equal(t, int64(42), got.User.ID)
 	require.Equal(t, "Family Member", got.User.Name)
+	require.Equal(t, int64(77), got.Key.ID)
+	require.Equal(t, "Family tablet", got.Key.Name)
 	require.NotContains(t, w.Body.String(), "sk-sensitive-value")
 	require.NotContains(t, w.Body.String(), "private@example.com")
 	require.NotContains(t, w.Body.String(), "99.5")
@@ -56,4 +60,9 @@ func TestGatewayHandlerKeyIdentityRejectsMissingKey(t *testing.T) {
 
 func TestKeyIdentityDisplayNameFallsBackToStableLabel(t *testing.T) {
 	require.Equal(t, "Sub2API User 7", keyIdentityDisplayName(&service.User{ID: 7, Username: "  "}))
+}
+
+func TestKeyIdentityKeyDisplayNameDoesNotUseTheSecret(t *testing.T) {
+	key := &service.APIKey{ID: 9, Key: "sk-sensitive-value", Name: "  "}
+	require.Equal(t, "API Key 9", keyIdentityKeyDisplayName(key))
 }

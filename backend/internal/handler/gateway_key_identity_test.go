@@ -18,8 +18,8 @@ func TestGatewayHandlerKeyIdentityReturnsOnlySafeIdentityFields(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodGet, "/v1/sub2api/identity", nil)
 	c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
-		ID: 77,
-		Key: "sk-sensitive-value",
+		ID:   77,
+		Key:  "sk-sensitive-value",
 		Name: "Family tablet",
 		User: &service.User{
 			ID:       42,

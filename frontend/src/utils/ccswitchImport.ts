@@ -25,6 +25,10 @@ function withV1Endpoint(baseUrl: string): string {
   return normalizedBaseUrl.endsWith('/v1') ? normalizedBaseUrl : `${normalizedBaseUrl}/v1`
 }
 
+function withoutTrailingSlashes(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, '')
+}
+
 export function resolveCcSwitchImportConfig(
   platform: GroupPlatform | undefined | null,
   clientType: CcSwitchClientType,
@@ -34,12 +38,14 @@ export function resolveCcSwitchImportConfig(
     case 'antigravity':
       return {
         app: clientType === 'gemini' ? 'gemini' : 'claude',
-        endpoint: `${baseUrl}/antigravity`
+        endpoint: `${baseUrl.replace(/\/+$/, '')}/antigravity`
       }
     case 'openai':
       return {
         app: 'codex',
-        endpoint: baseUrl,
+        // CC Switch's Codex provider appends the OpenAI-compatible path itself.
+        // Passing /v1 here can make the client request /v1/v1/....
+        endpoint: withoutTrailingSlashes(baseUrl),
         model: OPENAI_CC_SWITCH_CODEX_MODEL
       }
     case 'gemini':

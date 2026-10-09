@@ -123,6 +123,12 @@ linters:
 
   exclusions:
     rules:
+      # x/net v0.60 修复 HTTP/2 安全问题，同时标记扩展包适配 API 为弃用。
+      # 保留上游现有 H2C、PING 和 GoAwayError 兼容行为；仅豁免这五个文件
+      # 内对应 API 的 SA1019 提示。其他正确性检查及 govulncheck 仍完整执行。
+      - path: 'internal/(repository/http_upstream(_http2_keepalive_test)?|server/http|service/openai_codex_models_service(_test)?)\.go$'
+        linters: [ staticcheck ]
+        text: 'SA1019:.*golang\.org/x/net/http2[.)]'
       # G703/G704 污点分析在测试文件中只会命中 httptest mock 与测试者自设的
       # 环境变量路径，不构成攻击面；且该分析跨环境结果不稳定（本地/CI 报告的
       # 位置集合不同），逐点 nolint 无法收敛，故按路径豁免。生产代码不豁免，

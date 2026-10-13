@@ -16,6 +16,7 @@ concurrency:
 
 env:
   IMAGE_NAME: ghcr.io/wangfugui-cpu/sub2api
+  OFFICIAL_BASE_VERSION: 0.2.16
 
 jobs:
   build-and-push:
@@ -41,6 +42,7 @@ jobs:
           file: ./Dockerfile
           push: true
           build-args: |
+            VERSION=${{ env.OFFICIAL_BASE_VERSION }}
             COMMIT=${{ github.sha }}
           tags: |
             ${{ env.IMAGE_NAME }}:personal-latest
@@ -48,5 +50,6 @@ jobs:
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ env.OFFICIAL_BASE_VERSION }}-personal
           cache-from: type=gha
           cache-to: type=gha,mode=max

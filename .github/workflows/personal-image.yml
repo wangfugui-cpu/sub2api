@@ -16,7 +16,7 @@ concurrency:
 
 env:
   IMAGE_NAME: ghcr.io/wangfugui-cpu/sub2api
-  OFFICIAL_BASE_VERSION: 0.2.16
+  OFFICIAL_BASE_VERSION: 0.2.17
 
 jobs:
   build-and-push:
